@@ -76,27 +76,13 @@ slots:
       events: []
       methods: []
 handlers:
-- code: screenHandler()
-  filter:
-    args:
-    - variable: '*'
-    signature: onOutputChanged(output)
-    slotKey: '0'
-  key: '0'
-- code: screenHandler()
+- code: screenHandler(output)
   filter:
     args:
     - variable: '*'
     signature: onOutputChanged(output)
     slotKey: '1'
-  key: '1'
-- code: screenHandler()
-  filter:
-    args:
-    - variable: '*'
-    signature: onOutputChanged(output)
-    slotKey: '2'
-  key: '2'
+  key: '0'
 - code: |-
     function convertToPosString(vector)
         return string.format("::pos{0,0,%f,%f,%f}", vector.x, vector.y, vector.z)
@@ -244,7 +230,7 @@ handlers:
         end
 
         dumpSchematicJson(industryUnits)
-        screen.setScriptInput(json.encode(missingSchematicIds))
+        return missingSchematics
     end
 
     function selectSchematic(selectedSchematic)
@@ -254,7 +240,6 @@ handlers:
         for _, industryUnit in pairs(industryUnits) do
             if industryUnit.isMissingSchematic(selectedSchematic) then
                 selectedUnit = industryUnit.id
-                system.print("load unit " .. industryUnit.name)
                 system.setWaypoint(convertToPosString(industryUnit.getWorldPosition()), true)
                 break
             end
@@ -262,15 +247,21 @@ handlers:
 
         if selectedUnit == nil then
             system.clearWaypoint(true)
-            system.print("finished loading schematics for  " .. schematicName .. "!")
         end
 
         return selectedUnit
     end
 
-    function screenHandler()
-        system.print("started schematic loading helper, press alt+1 once the machine at the waypoint has been loaded")
-        selectedSchematic = tonumber(output)
+    function startSchematicLoadingHelper(schematicId)
+        if schematicId == 0 then
+            system.clearWaypoint(true)
+            selectedSchematic = nil
+            selectedUnit = nil
+            return
+        end
+
+        system.print("started schematic loading helper, press alt+2 once the machine at the waypoint has been loaded")
+        selectedSchematic = tonumber(schematicId)
 
         local missingCount = 0
         for _, industryUnit in pairs(industryUnits) do
@@ -279,10 +270,90 @@ handlers:
             end
         end
 
-        system.print("schematic: " .. system.getItem(selectedSchematic).displayName)
-        system.print("number of industry units: " .. missingCount)
-
         selectedUnit = selectSchematic(selectedSchematic)
+    end
+
+    function drawUI()
+        local html = [[
+    <style>
+    .box{
+        background-image: linear-gradient(to right, rgb(34, 52, 59), rgb(48, 72, 81), rgb(34, 52, 59));
+        width: fit-content;
+        padding: 10px;
+        border: 1px;
+    }
+        
+    .header{
+        font-weight: bold;
+        color: white;
+        font-size: 20px;
+    }
+
+    .schematic{
+        color: white;
+        font-size: 18px;
+    }
+
+    .selected{
+        background-color: rgb(182, 223, 237);
+        color: black;
+        padding: 10px;
+        margin: -10px;
+    }
+        
+    .industry{
+        font-size: 16px;
+        padding-left: 10px;
+        margin-left: 10px;
+        border-left: solid 2px black;
+    }
+        
+    .selected-industry{
+        border-left: solid 2px yellow;
+    }
+    </style>
+        
+    <div class="box">
+    <div class="header">Missing Schematics</div><br>
+    ]]
+
+        local index = 0
+        for schematicId, _ in pairs(getMissingSchematics(industryUnits)) do
+            index = index + 1
+            local schematic = system.getItem(schematicId).displayNameWithSize
+
+            local class = "schematic"
+            local industryUnitHtml = ""
+
+            if index == schematicListIndex then
+                class = class .. " selected"
+                
+                for _, industryUnit in pairs(industryUnits) do
+                    if industryUnit.isMissingSchematic(schematicId) then
+                        local iuClass = "industry"
+                        if selectedUnit == industryUnit.id then
+                            iuClass = iuClass .. " selected-industry"
+                        end
+                        industryUnitHtml = industryUnitHtml .. "<div class=\"" .. iuClass .. "\">" .. industryUnit.name .. "</div>"
+                    end
+                end
+            end
+
+            html = html .. "<div class=\"" .. class .. "\">" .. schematic ..  industryUnitHtml .. "</div>"
+        end
+
+        html = html .. "</div>"
+        system.showScreen(true)
+        system.setScreen(html)
+    end
+
+    function schematicsSorted(industryUnits)
+        local schematicIds = {}
+        for schematicId, _ in pairs(getMissingSchematics(industryUnits)) do
+            table.insert(schematicIds, schematicId)
+        end
+        table.sort(schematicIds)
+        return schematicIds
     end
 
     for _, slot in pairs(unit) do
@@ -290,8 +361,6 @@ handlers:
             local class = slot.getClass()
             if class == "DataBankUnit" then
                 databank = slot
-            elseif class == "ScreenUnit" then
-                screen = slot
             elseif class == "CoreUnitStatic" then
                 core = slot
             end
@@ -301,135 +370,27 @@ handlers:
     if databank == nil then
         system.print("databank link required")
         unit.exit()
-    elseif screen == nil then
-        system.print("screen link required")
-        unit.exit()
     elseif core == nil then
         system.print("core link required")
         unit.exit()
     end
 
-    screen.activate()
-    screen.setRenderScript([[
-    json = require("dkjson")
-
-    schematics = {
-        [3077761447] = "Atmospheric Fuel Schematic Copy",
-        [674258992] = "Bonsai Schematic Copy",
-        [784932973] = "Construct Support L Schematic Copy",
-        [1861676811] = "Construct Support M Schematic Copy",
-        [1224468838] = "Construct Support S Schematic Copy",
-        [1477134528] = "Construct Support XS Schematic Copy",
-        [1202149588] = "Core Unit L Schematic Copy",
-        [1417495315] = "Core Unit M Schematic Copy",
-        [1213081642] = "Core Unit S Schematic Copy",
-        [120427296] = "Core Unit XS Schematic Copy",
-        [3992802706] = "Rocket Fuels Schematic Copy",
-        [1917988879] = "Space Fuels Schematic Copy",
-        [318308564] = "Territory Unit Schematic Copy",
-        [2068774589] = "Tier 1 L Element Schematic Copy",
-        [2066101218] = "Tier 1 M Element Schematic Copy",
-        [2479827059] = "Tier 1 Product Honeycomb Schematic Copy",
-        [690638651] = "Tier 1 Product Material Schematic Copy",
-        [4148773283] = "Tier 1 S Element Schematic Copy",
-        [304578197] = "Tier 1 XL Element Schematic Copy",
-        [1910482623] = "Tier 1 XS Element Schematic Copy",
-        [512435856] = "Tier 2 Ammo L Schematic Copy",
-        [399761377] = "Tier 2 Ammo M Schematic Copy",
-        [3336558558] = "Tier 2 Ammo S Schematic Copy",
-        [326757369] = "Tier 2 Ammo XS Schematic Copy",
-        [616601802] = "Tier 2 L Element Schematic Copy",
-        [2726927301] = "Tier 2 M Element Schematic Copy",
-        [632722426] = "Tier 2 Product Honeycomb Schematic Copy",
-        [4073976374] = "Tier 2 Product Material Schematic Copy",
-        [625377458] = "Tier 2 Pure Honeycomb Schematic Copy",
-        [3332597852] = "Tier 2 Pure Material Schematic Copy",
-        [1752968727] = "Tier 2 S Element Schematic Copy",
-        [1952035274] = "Tier 2 Scrap Schematic Copy",
-        [3677281424] = "Tier 2 XL Element Schematic Copy",
-        [2096799848] = "Tier 2 XS Element Schematic Copy",
-        [2913149958] = "Tier 3 Ammo L Schematic Copy",
-        [3125069948] = "Tier 3 Ammo M Schematic Copy",
-        [1705420479] = "Tier 3 Ammo S Schematic Copy",
-        [2413250793] = "Tier 3 Ammo XS Schematic Copy",
-        [1427639881] = "Tier 3 L Element Schematic Copy",
-        [3713463144] = "Tier 3 M Element Schematic Copy",
-        [2343247971] = "Tier 3 Product Honeycomb Schematic Copy",
-        [3707339625] = "Tier 3 Product Material Schematic Copy",
-        [4221430495] = "Tier 3 Pure Honeycomb Schematic Copy",
-        [2003602752] = "Tier 3 Pure Material Schematic Copy",
-        [425872842] = "Tier 3 S Element Schematic Copy",
-        [2566982373] = "Tier 3 Scrap Schematic Copy",
-        [109515712] = "Tier 3 XL Element Schematic Copy",
-        [787727253] = "Tier 3 XS Element Schematic Copy",
-        [2557110259] = "Tier 4 Ammo L Schematic Copy",
-        [3847207511] = "Tier 4 Ammo M Schematic Copy",
-        [3636126848] = "Tier 4 Ammo S Schematic Copy",
-        [2293088862] = "Tier 4 Ammo XS Schematic Copy",
-        [1614573474] = "Tier 4 L Element Schematic Copy",
-        [3881438643] = "Tier 4 M Element Schematic Copy",
-        [3743434922] = "Tier 4 Product Honeycomb Schematic Copy",
-        [2485530515] = "Tier 4 Product Material Schematic Copy",
-        [99491659] = "Tier 4 Pure Honeycomb Schematic Copy",
-        [2326433413] = "Tier 4 Pure Material Schematic Copy",
-        [3890840920] = "Tier 4 S Element Schematic Copy",
-        [1045229911] = "Tier 4 Scrap Schematic Copy",
-        [1974208697] = "Tier 4 XL Element Schematic Copy",
-        [210052275] = "Tier 4 XS Element Schematic Copy",
-        [86717297] = "Tier 5 L Element Schematic Copy",
-        [3672319913] = "Tier 5 M Element Schematic Copy",
-        [1885016266] = "Tier 5 Product Honeycomb Schematic Copy",
-        [2752973532] = "Tier 5 Product Material Schematic Copy",
-        [3303272691] = "Tier 5 Pure Honeycomb Schematic Copy",
-        [1681671893] = "Tier 5 Pure Material Schematic Copy",
-        [880043901] = "Tier 5 S Element Schematic Copy",
-        [2702634486] = "Tier 5 Scrap Schematic Copy",
-        [1320378000] = "Tier 5 XL Element Schematic Copy",
-        [1513927457] = "Tier 5 XS Element Schematic Copy",
-        [3437488324] = "Warp Beacon Schematic Copy",
-        [363077945] = "Warp Cell Schematic Copy",
-    }
-
-    layer = createLayer()
-    font = loadFont("Play", 45)
-    textWidth, textHeight = getTextBounds(font, "A")
-    screenWidth, screenHeight = getResolution()
-    textPadding = textHeight / 3
-    cursorX, cursorY = getCursor()
-    setDefaultTextAlign(layer, AlignH_Left, AlignV_Top)
-
-    for index, schematicId in pairs(json.decode(getInput())) do
-        local lineStartY = (textHeight+textPadding)*index
-        local lineEndY = lineStartY + textHeight + textPadding
-
-        if lineStartY <= cursorY and cursorY <= lineEndY and getCursorPressed() then
-            selectedSchematic = schematicId
-            setOutput(schematicId)
-        end
-
-        if schematicId == selectedSchematic then
-            setNextFillColor(layer, 1, 1, 0, 1)
-        end
-
-        addText(layer, font, schematics[schematicId], 0, lineStartY)
-    end
-    ]])
-
+    schematicListIndex = 0
     industryUnits = getIndustryUnits()
+    drawUI()
     unit.setTimer("checkMissing", 5)
   filter:
     args: []
     signature: onStart()
     slotKey: '-1'
-  key: '3'
-- code: |
-    getMissingSchematics(industryUnits)
+  key: '1'
+- code: drawUI()
   filter:
     args:
     - value: checkMissing
     signature: onTimer(tag)
     slotKey: '-1'
-  key: '4'
+  key: '2'
 - code: |-
     for _, industryUnit in pairs(industryUnits) do
         if industryUnit.id == selectedUnit then
@@ -440,9 +401,23 @@ handlers:
     selectedUnit = selectSchematic(selectedSchematic)
   filter:
     args:
+    - value: option2
+    signature: onActionStart(action)
+    slotKey: '-4'
+  key: '3'
+- code: |-
+    schematicIds = schematicsSorted(industryUnits)
+    schematicListIndex = schematicListIndex + 1
+    if schematicListIndex > #schematicIds then
+        schematicListIndex = 0
+    end
+    startSchematicLoadingHelper(schematicListIndex == 0 and 0 or schematicIds[schematicListIndex])
+    drawUI()
+  filter:
+    args:
     - value: option1
     signature: onActionStart(action)
     slotKey: '-4'
-  key: '5'
+  key: '4'
 methods: []
 events: []

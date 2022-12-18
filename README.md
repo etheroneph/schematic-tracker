@@ -15,9 +15,8 @@ Dual Universe script that tracks the missing schematics on your industry units. 
 
 1. Place the programming board
 2. Link the programming board to the core.
-3. Link the programming board to a screen.
 4. Link the programming board to a databank.
 
 # Usage
 
-Run the programming board and it will display all missing schematics to the attached screen. Click on the schematic you're ready to load and it will set a waypoint to an industry machine that needs the schematic. Once the machine is loaded, press alt+1 and it will set the next waypoint.
+Run the programming board and it will display all missing schematics on the on screen widget. Press alt+1 to cycle the schematics. It will set a waypoint to an industry machine that needs the schematic and show the list of machines. Once the machine is loaded, press alt+2 and it will set the next waypoint.

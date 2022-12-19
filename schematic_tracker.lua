@@ -269,22 +269,28 @@ handlers:
         local html = [[
     <style>
     .box{
-        background-image: linear-gradient(to right, rgb(34, 52, 59), rgb(48, 72, 81), rgb(34, 52, 59));
+        background-color: rgb(9, 16, 19);
         width: fit-content;
         padding: 10px;
-        border: 1px;
+        border: solid 1px black;
     }
         
     .header{
         font-weight: bold;
         color: white;
-        font-size: 20px;
+        font-size: 25px;
+        text-align: center;
+        background-image: linear-gradient(to right, rgb(34, 52, 59), rgb(48, 72, 81), rgb(34, 52, 59));
+        margin: -10px;
+        padding-top: 5px;
+        font-family: Refrigerator;
     }
 
     .schematic{
-        color: white;
+        color: rgb(146, 180, 192);
         font-size: 18px;
         padding: 10px;
+        font-family: Play;
     }
 
     .selected{
@@ -307,7 +313,7 @@ handlers:
     </style>
         
     <div class="box">
-    <div class="header">Missing Schematics</div><br>
+    <div class="header">MISSING SCHEMATICS</div><br>
     ]]
 
         for _, schematicId in pairs(schematicsSorted(industryUnits)) do

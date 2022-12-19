@@ -233,12 +233,25 @@ handlers:
         return missingSchematics
     end
 
-    function selectSchematic(selectedSchematic)
-        local selectedUnit
+    function selectSchematic(schematicId)
+        if schematicId ~= selectedSchematic then
+            system.clearWaypoint(true)
+            selectedUnit = nil
+        end
+
+        selectedSchematic = schematicId
+
+        if schematicId == 0 then
+            selectedSchematic = nil
+            selectedUnit = nil
+            return
+        end
+
         local schematicName = system.getItem(selectedSchematic).displayName
 
         for _, industryUnit in pairs(industryUnits) do
             if industryUnit.isMissingSchematic(selectedSchematic) then
+                system.print(industryUnit.name .. schematicName)
                 selectedUnit = industryUnit.id
                 system.setWaypoint(convertToPosString(industryUnit.getWorldPosition()), true)
                 break
@@ -250,27 +263,6 @@ handlers:
         end
 
         return selectedUnit
-    end
-
-    function startSchematicLoadingHelper(schematicId)
-        if schematicId == 0 then
-            system.clearWaypoint(true)
-            selectedSchematic = nil
-            selectedUnit = nil
-            return
-        end
-
-        system.print("started schematic loading helper, press alt+2 once the machine at the waypoint has been loaded")
-        selectedSchematic = tonumber(schematicId)
-
-        local missingCount = 0
-        for _, industryUnit in pairs(industryUnits) do
-            if industryUnit.isMissingSchematic(selectedSchematic) then
-                missingCount = missingCount + 1
-            end
-        end
-
-        selectedUnit = selectSchematic(selectedSchematic)
     end
 
     function drawUI()
@@ -292,13 +284,14 @@ handlers:
     .schematic{
         color: white;
         font-size: 18px;
+        padding: 10px;
     }
 
     .selected{
         background-color: rgb(182, 223, 237);
         color: black;
-        padding: 10px;
-        margin: -10px;
+        margin-left: -10px;
+        margin-right: -10px;
     }
         
     .industry{
@@ -317,20 +310,19 @@ handlers:
     <div class="header">Missing Schematics</div><br>
     ]]
 
-        local index = 0
-        for schematicId, _ in pairs(getMissingSchematics(industryUnits)) do
-            index = index + 1
+        for _, schematicId in pairs(schematicsSorted(industryUnits)) do
             local schematic = system.getItem(schematicId).displayNameWithSize
 
             local class = "schematic"
             local industryUnitHtml = ""
 
-            if index == schematicListIndex then
+            if schematicId == selectedSchematic then
                 class = class .. " selected"
                 
                 for _, industryUnit in pairs(industryUnits) do
                     if industryUnit.isMissingSchematic(schematicId) then
                         local iuClass = "industry"
+                        system.print("selected unit: " .. selectedUnit .. " industry unit: " .. industryUnit.id)
                         if selectedUnit == industryUnit.id then
                             iuClass = iuClass .. " selected-industry"
                         end
@@ -384,7 +376,11 @@ handlers:
     signature: onStart()
     slotKey: '-1'
   key: '1'
-- code: drawUI()
+- code: |-
+    drawUI()
+    collectgarbage("count")
+    collectgarbage("collect")
+    collectgarbage("collect")
   filter:
     args:
     - value: checkMissing
@@ -398,7 +394,8 @@ handlers:
         end
     end
 
-    selectedUnit = selectSchematic(selectedSchematic)
+    selectSchematic(selectedSchematic)
+    drawUI()
   filter:
     args:
     - value: option2
@@ -411,7 +408,7 @@ handlers:
     if schematicListIndex > #schematicIds then
         schematicListIndex = 0
     end
-    startSchematicLoadingHelper(schematicListIndex == 0 and 0 or schematicIds[schematicListIndex])
+    selectSchematic(schematicListIndex == 0 and 0 or schematicIds[schematicListIndex])
     drawUI()
   filter:
     args:

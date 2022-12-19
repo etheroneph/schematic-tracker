@@ -1,5 +1,7 @@
 Dual Universe script that tracks the missing schematics on your industry units. It can track the entire factory and will walk you through loading schematics into each machine.
 
+![screenshot](/assets/missing_schematics.png)
+
 # Features
 
 * Lists schematics that industry machines have run out of

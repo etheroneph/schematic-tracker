@@ -310,6 +310,10 @@ handlers:
     .selected-industry{
         border-left: solid 2px yellow;
     }
+
+    hr{
+        border: 1px solid rgb(34, 52, 59);
+    }
     </style>
         
     <div class="box">
@@ -337,7 +341,7 @@ handlers:
                 end
             end
 
-            html = html .. "<div class=\"" .. class .. "\">" .. schematic ..  industryUnitHtml .. "</div>"
+            html = html .. "<div class=\"" .. class .. "\">" .. schematic ..  industryUnitHtml .. "</div><hr>"
         end
 
         html = html .. "</div>"

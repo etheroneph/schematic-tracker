@@ -251,7 +251,6 @@ handlers:
 
         for _, industryUnit in pairs(industryUnits) do
             if industryUnit.isMissingSchematic(selectedSchematic) then
-                system.print(industryUnit.name .. schematicName)
                 selectedUnit = industryUnit.id
                 system.setWaypoint(convertToPosString(industryUnit.getWorldPosition()), true)
                 break
@@ -283,6 +282,8 @@ handlers:
         background-image: linear-gradient(to right, rgb(34, 52, 59), rgb(48, 72, 81), rgb(34, 52, 59));
         margin: -10px;
         padding-top: 5px;
+        padding-left: 10px;
+        padding-right: 10px;
         font-family: Refrigerator;
     }
 
@@ -332,7 +333,6 @@ handlers:
                 for _, industryUnit in pairs(industryUnits) do
                     if industryUnit.isMissingSchematic(schematicId) then
                         local iuClass = "industry"
-                        system.print("selected unit: " .. selectedUnit .. " industry unit: " .. industryUnit.id)
                         if selectedUnit == industryUnit.id then
                             iuClass = iuClass .. " selected-industry"
                         end
